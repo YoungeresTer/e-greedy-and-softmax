@@ -6,6 +6,7 @@ import java.util.Random;
 // author:xiaobingscuer
 // 实现了4 臂赌博机的 softMax和e-greedy两种平衡探索和利用的方式
 // 采用的是增量的方式估计动作的Q-value
+// 最后采用自助法抽样的方式来估计总体的总和和均值
 ////
 public class EgreedyOrSoftmax {
 
@@ -15,13 +16,13 @@ public class EgreedyOrSoftmax {
 				int ENSEMBLE_SCALE=1000;						// 总体规模，这里可表示成执行动作的次数
 				Random rand=new Random();						// 随机数
 				int action=0;									// 初始化动作，action=0,1,2,3，共四个动作
-				float[] actionQValue=new float[4];				// 动作q-value,即动作的Q值估计
+				float[] actionQValue=new float[4];				// 动作q-value,即动作期望的Q值估计
 				int[] actionCount=new int[4];					// 对四个动作执行的次数进行分别计数
 				float[] actionPosib=new float[4];				// 四个动作的概率估计
 				float[] sumActionPosib=new float[4];			// 四个动作的概率累计已方便后面选择动作
 				ArrayList<Integer> actionSequence=new ArrayList<>(); // 记录依次执行的动作
 				float ExpectedReword=0;							// 期望的奖励估计
-				float temperature=0.0001f;						// 温度因子
+				float temperature=0.001f;						// 温度因子
 				int[][] ensembleArry=new int[4][ENSEMBLE_SCALE]; // 不同动作的总体，即不同动作的奖励分布
 				
 		
@@ -32,7 +33,7 @@ public class EgreedyOrSoftmax {
 				actionQValue[3]=10;
 		
 				for(int i=0;i<ENSEMBLE_SCALE;i++){				// 初始化不同动作的奖励分布；也可以不用一开始就初始化，可在边探索/利用的同时边采样
-					ensembleArry[0][i]=rand.nextInt(1000); 		// 我这里先生成动作可能对应的奖励，在后边顺序拿出这些奖励即可
+					ensembleArry[0][i]=rand.nextInt(500); 		// 我这里先生成动作可能对应的奖励，在后边顺序拿出这些奖励即可
 					ensembleArry[1][i]=rand.nextInt(500);		// 这些奖励分别服从区间为（0,1000）、（0,500）、（300,800）、（500,1000）的分布
 					ensembleArry[2][i]=rand.nextInt(500)+300;	// 从这个分布可以看出，执行的动作3的期望奖励是最高的，在750
 					ensembleArry[3][i]=rand.nextInt(500)+500;				
@@ -132,7 +133,9 @@ public class EgreedyOrSoftmax {
 //		}
 		
 		
-// 从总体中采样，并估计总体的总和，采用增量式在线估计总和和均值
+// 采用自助法抽样，每次从总体中抽出SAMPLE_SCALE个样本，总共抽取SAMPLE_NUM次，
+// 自助法的思想就是有放回的抽样，抽取多次在求平均
+// 采用增量式在线估计总和和均值
 //		int SAMPLE_SCALE=10;
 //		int ENSEMBLE_SCALE=100;
 //		int SAMPLE_NUM=10;
@@ -145,24 +148,24 @@ public class EgreedyOrSoftmax {
 //		float ensembleAverage=0;
 //		float AverageEstimate=0;
 //		for(int i=0;i<ENSEMBLE_SCALE;i++){
-//			ensemble[i]=i+1;// 总体为1,2,3，，，1000
+//			ensemble[i]=i+1;  // 总体为1,2,3，，，1000
 //			ensembleSum+=ensemble[i];	
 //			ensembleAverage=ensembleAverage+(ensemble[i]-ensembleAverage)/(i+1);				
 //		}
 //		
-//		for(int j=0;j<SAMPLE_NUM;j++){
+//		for(int j=0;j<SAMPLE_NUM;j++){							// 有放回的抽取 SAMPLE_NUM 次
 //			int sum=0;
 //			float avg=0;
-//			for(int i=0;i<SAMPLE_SCALE;i++){
+//			for(int i=0;i<SAMPLE_SCALE;i++){					// 每次抽取 SAMPLE_SCALE 个样本
 //				int mark=rand.nextInt(ENSEMBLE_SCALE);	
-//				sum+=ensemble[mark]*scale;
-//				avg=avg+(ensemble[mark]-avg)/(i+1);			
+//				sum+=ensemble[mark]*scale;						// SAMPLE_SCALE 个的总和
+//				avg=avg+(ensemble[mark]-avg)/(i+1);				// SAMPLE_SCALE 个的平均，在线增量式计算
 //			}
-//			ensembleSumEstimate=ensembleSumEstimate+(sum-ensembleSumEstimate)/(j+1); 
-//			AverageEstimate=AverageEstimate+(avg-AverageEstimate)/(j+1); 
+//			ensembleSumEstimate=ensembleSumEstimate+(sum-ensembleSumEstimate)/(j+1);  // SAMPLE_NUM 次 抽取后的总和的平均，增量式计算
+//			AverageEstimate=AverageEstimate+(avg-AverageEstimate)/(j+1); 			  // SAMPLE_NUM 次 抽取后的平均的平均，在线增量式计算
 //		}
 //
-//		System.out.println("这1000个数的总和："+ensembleSum);
+//		System.out.println("这1000个数的总和："+ensembleSum);			// 输出
 //		System.out.println("采样估计的总和："+ensembleSumEstimate);
 //		
 //		System.out.println("总和的平均："+ensembleAverage);
